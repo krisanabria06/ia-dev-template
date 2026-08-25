@@ -137,7 +137,10 @@ def _decide_tool(user_msg: str) -> tuple[str, dict[str, Any], str]:
     has_math_expression = bool(re.search(r"\d\s*[\+\-\*\/x\^]\s*\d", msg)) or bool(
         re.search(r"\d+\s*(por|mas|menos|entre|veces)\s*\d+", msg)
     )
-    has_math_keyword = any(w in msg for w in ("calcula", "cuanto", "cuánto", "resultado", "suma", "multiplica"))
+    has_math_keyword = any(
+        w in msg
+        for w in ("calcula", "cuanto", "cuánto", "resultado", "suma", "multiplica")
+    )
 
     if has_math_expression or has_math_keyword:
         # Intenta extraer la expresión
@@ -153,7 +156,9 @@ def _decide_tool(user_msg: str) -> tuple[str, dict[str, Any], str]:
     # Heurística 2: lookup de comerciantes → merchant_lookup
     merchant_match = re.search(r"(MCHT[-_]?\d{3,5})", user_msg, re.IGNORECASE)
     if merchant_match or "merchant" in msg or "comerciante" in msg or "comercio" in msg:
-        merchant_id = merchant_match.group(1).upper() if merchant_match else "MCHT-00001"
+        merchant_id = (
+            merchant_match.group(1).upper() if merchant_match else "MCHT-00001"
+        )
         if "-" not in merchant_id and len(merchant_id) > 4:
             merchant_id = f"MCHT-{merchant_id[4:]}"
         return (
@@ -173,11 +178,13 @@ def _decide_tool(user_msg: str) -> tuple[str, dict[str, Any], str]:
     # Default: terminar con un mensaje genérico
     return (
         "FINISH",
-        {"answer": (
-            "No puedo identificar una herramienta adecuada para esta consulta. "
-            "Por favor reformula tu pregunta indicando un calculo, un merchant_id, "
-            "o usa el LLM real (MOCK_MODE=false)."
-        )},
+        {
+            "answer": (
+                "No puedo identificar una herramienta adecuada para esta consulta. "
+                "Por favor reformula tu pregunta indicando un calculo, un merchant_id, "
+                "o usa el LLM real (MOCK_MODE=false)."
+            )
+        },
         "No tengo una herramienta clara para esta consulta. Termino el ciclo.",
     )
 
@@ -190,6 +197,48 @@ def _agent_response(user_msg: str) -> str:
         "action": action,
         "action_input": action_input,
     }
+    return json.dumps(payload, ensure_ascii=False)
+
+
+def _is_prd_agent_call(messages: list[Message]) -> bool:
+    """Detecta el contrato ReAct específico del agente del PRD."""
+    return any(
+        message.role == "system"
+        and message.content
+        and "buscar_regla_prd" in message.content
+        and "action_input" in message.content
+        for message in messages
+    )
+
+
+def _prd_agent_response(messages: list[Message]) -> str:
+    """Devuelve decisiones compatibles con app.agent.loop."""
+    user_msg = messages[-1].content or ""
+    if user_msg.lower().startswith("observation:"):
+        evidence = user_msg.removeprefix("Observation:").strip()
+        if evidence.lower().startswith("sin coincidencias"):
+            answer = "fuera de alcance"
+        else:
+            answer = f"Según la evidencia del PRD:\n{evidence}"
+        payload = {
+            "thought": "Ya tengo evidencia suficiente para responder.",
+            "action": "final",
+            "action_input": {"respuesta": answer},
+        }
+        return json.dumps(payload, ensure_ascii=False)
+
+    if "capital de francia" in user_msg.lower():
+        payload = {
+            "thought": "La consulta no trata reglas del PRD.",
+            "action": "final",
+            "action_input": {"respuesta": "fuera de alcance"},
+        }
+    else:
+        payload = {
+            "thought": "Necesito recuperar evidencia del PRD.",
+            "action": "buscar_regla_prd",
+            "action_input": {"termino": user_msg},
+        }
     return json.dumps(payload, ensure_ascii=False)
 
 
@@ -237,7 +286,9 @@ async def chat_completions(request: ChatCompletionRequest) -> ChatCompletionResp
         last_msg = request.messages[-1].content or ""
 
     # Decide el modo de respuesta
-    if _is_agent_call(request.messages):
+    if _is_prd_agent_call(request.messages):
+        content = _prd_agent_response(request.messages)
+    elif _is_agent_call(request.messages):
         content = _agent_response(last_msg)
     else:
         content = _conversational_response(last_msg)
@@ -290,5 +341,6 @@ async def root() -> dict[str, Any]:
 # Permite ejecutar como módulo: `uv run --frozen python -m app.mock_llm`
 if __name__ == "__main__":
     import uvicorn
+
     # Mock LLM debe escuchar todas las interfaces para Docker Compose
     uvicorn.run(mock_app, host="0.0.0.0", port=8001)  # noqa: S104  # nosec B104
