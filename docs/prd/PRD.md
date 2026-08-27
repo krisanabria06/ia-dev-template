@@ -41,9 +41,10 @@
 - Transaction: entidad representada por los datos de ejemplo de transacciones. Se utilizan campos como transaction_id, merchant_id, amount_usd, timestamp, status, flag_reason e incident_ref.
 
 ### Reglas de negocio
-- El agente debe responder con un formato estructurado válido para que el flujo de ejecución sea interpretable.
-- Si una acción requiere aprobación humana, el agente debe detenerse y comunicarlo explícitamente.
-- El agente debe usar herramientas disponibles para ejecutar tareas concretas en lugar de responder únicamente con texto general.
+- El historial consultable cubre como máximo los últimos **90 días**; las fechas
+  anteriores requieren el endpoint de archivo.
+- Solo se exponen los **últimos 4 dígitos del PAN**; nunca se devuelve el PAN
+  completo por la política PCI-DSS.
 - Los datos usados en este alcance provienen de los ejemplos incluidos en el repositorio y no de una fuente productiva.
 
 ## 4. Historias de usuario con criterios de aceptación

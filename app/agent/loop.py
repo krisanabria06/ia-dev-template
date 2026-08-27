@@ -9,8 +9,10 @@ from typing import Any
 from app.agent.logger import log_step
 from app.agent.tools import TOOLS_SCHEMA, buscar_regla_prd
 
+# 🛡️ Baranda #3 · BUDGET · límite de iteraciones del loop
 MAX_STEPS = 5
 DEFAULT_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+# 🛡️ Baranda #1 · SCOPE · en el SYSTEM_PROMPT
 SYSTEM_PROMPT = """Sos un agente RAG del Historial de Transacciones LegacyPay.
 Solo respondés sobre las reglas contenidas en el PRD; si te preguntan otra cosa,
 decís exactamente 'fuera de alcance'. No ejecutás acciones destructivas y no

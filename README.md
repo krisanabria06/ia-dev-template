@@ -191,6 +191,40 @@ uv run --frozen ruff check . && uv run --frozen mypy app/ --ignore-missing-impor
 
 > Si algún comando falla, el CI fallará también. No abras un PR con CI rojo.
 
+## Release Candidate · Proyecto Final
+
+Agente RAG que responde preguntas sobre el PRD "Historial de Transacciones
+LegacyPay", basado en ReAct con retriever lexical sobre `docs/prd/PRD.md`.
+
+### Cómo probarlo en 5 minutos
+
+```bash
+git checkout proyecto-final
+uv sync
+uv run --frozen uvicorn app.mock_llm:mock_app --port 8001
+uv run --frozen python evals/eval_agent.py
+```
+
+### Arquitectura y barandas
+
+- Tool: `buscar_regla_prd`, registrada en `app/agent/tools.py`.
+- Loop: patrón ReAct con `MAX_STEPS = 5`.
+- RAG: retriever lexical sobre `docs/prd/PRD.md`.
+- Log auditable: `logs/agent_run.jsonl`.
+- Scope explícito en `SYSTEM_PROMPT` y budget limitado por `MAX_STEPS`.
+
+### Criterios de aceptación
+
+- [x] Al menos 2/3 casos del Eval Set pasan.
+- [x] Cada corrida genera log auditable.
+- [x] El agente se abstiene ante preguntas fuera de alcance.
+- [ ] CI verde en GitHub Actions (requiere push al remoto).
+
+### Limitaciones conocidas
+
+El retriever lexical no cubre todos los sinónimos y el mock LLM es determinista;
+no representa el 100% de las respuestas de un LLM real.
+
 ---
 
 ## 🤖 Política de uso de IA

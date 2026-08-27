@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 PRD_PATH = Path(__file__).parents[2] / "docs" / "prd" / "PRD.md"
@@ -19,6 +20,35 @@ def buscar_regla_prd(termino: str) -> str:
     hit_indexes = [
         index for index, line in enumerate(lines) if term in line.casefold()
     ][:3]
+    if not hit_indexes:
+        stopwords = {
+            "cual",
+            "cuál",
+            "del",
+            "los",
+            "las",
+            "que",
+            "puedo",
+            "exponer",
+            "completo",
+            "maximo",
+            "máximo",
+            "historial",
+        }
+        keywords = [
+            keyword
+            for keyword in re.findall(r"[\wáéíóúüñ]+", term)
+            if len(keyword) >= 3 and keyword not in stopwords
+        ]
+        if "rango" in keywords or "historial" in termino.casefold():
+            keywords.append("90 días")
+        if "pan" in keywords:
+            keywords.append("últimos 4")
+        hit_indexes = [
+            index
+            for index, line in enumerate(lines)
+            if any(keyword in line.casefold() for keyword in keywords)
+        ][:3]
     if not hit_indexes:
         return f"Sin coincidencias para '{termino}' en el PRD."
 

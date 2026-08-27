@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -12,9 +11,9 @@ class TransactionOut(BaseModel):
     amount_usd: float
     timestamp: datetime
     status: str
-    pan_masked: Optional[str] = None
+    pan_masked: str | None = None
 
 
 class TransactionsPage(BaseModel):
-    items: List[TransactionOut]
-    next_cursor: Optional[str] = None
+    items: list[TransactionOut]
+    next_cursor: str | None = None
